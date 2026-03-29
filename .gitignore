@@ -1,0 +1,73 @@
+# ENV FILES (VERY IMPORTANT)
+.env
+.env.*
+
+#  Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+# ENV FILES
+.env
+.env.*
+frontend/.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual env
+.venv/
+
+# DB
+*.db
+
+# IDE
+.idea/
+.vscode/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# IDEs
+.idea/
+.vscode/
+
+#  OS files
+.DS_Store
+Thumbs.db
+
+# Database files
+*.db
+
+# Logs
+*.log
+
+#  Test / cache
+.pytest_cache/
+.mypy_cache/
+
+#  Build / dist
+dist/
+build/
+*.egg-info/
+
+#Docker (optional later)
+docker-compose.override.yml
+
+#Secrets
+secrets.json
