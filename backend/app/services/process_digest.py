@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.agent.digest_agent import DigestAgent
+from app.llm.base import BaseLLMProvider
 from app.database.repository import Repository
 
 logging.basicConfig(
@@ -16,8 +17,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def process_digests(limit: Optional[int] = None) -> dict:
-    agent = DigestAgent()
+def process_digests(limit: Optional[int] = None, provider: Optional[BaseLLMProvider] = None) -> dict:
+    agent = DigestAgent(provider=provider)
     repo = Repository()
     
     articles = repo.get_articles_without_digest(limit=limit)

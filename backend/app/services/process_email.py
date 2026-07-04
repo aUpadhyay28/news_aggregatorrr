@@ -1,10 +1,13 @@
 import logging
+from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from app.agent.email_agent import EmailAgent, RankedArticleDetail, EmailDigestResponse
 from app.agent.curator_agent import CuratorAgent
+from app.llm.base import BaseLLMProvider
+from app.llm.factory import get_default_provider
 from app.profiles.user_profile import USER_PROFILE
 from app.database.repository import Repository
 from app.services.email import send_email, digest_to_html
@@ -17,9 +20,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestResponse:
-    curator = CuratorAgent(USER_PROFILE)
-    email_agent = EmailAgent(USER_PROFILE)
+def generate_email_digest(
+    hours: int = 24,
+    top_n: int = 10,
+    provider: Optional[BaseLLMProvider] = None,
+) -> EmailDigestResponse:
+    # Share a single provider instance between the curator and email agent so
+    # both use the same fallback chain and configuration for this run.
+    provider = provider or get_default_provider()
+    curator = CuratorAgent(USER_PROFILE, provider=provider)
+    email_agent = EmailAgent(USER_PROFILE, provider=provider)
     repo = Repository()
     
     digests = repo.get_recent_digests(hours=hours)
@@ -66,9 +76,9 @@ def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestRespon
     return email_digest
 
 
-def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
+def send_digest_email(hours: int = 24, top_n: int = 10, provider: Optional[BaseLLMProvider] = None) -> dict:
     try:
-        result = generate_email_digest(hours=hours, top_n=top_n)
+        result = generate_email_digest(hours=hours, top_n=top_n, provider=provider)
         markdown_content = result.to_markdown()
         html_content = digest_to_html(result)
         

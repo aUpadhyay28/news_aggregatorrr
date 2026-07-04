@@ -1,12 +1,11 @@
-import os
+import asyncio
 import re
 from datetime import datetime, timezone
 from math import ceil
 from typing import Any, Iterable, Optional
 
-from openai import OpenAI
-
 from app.database.repository import Repository
+from app.llm.factory import get_default_provider
 from app.profiles.profile_store import get_user_profile
 
 
@@ -207,39 +206,20 @@ def generate_chat_response(message: str, article_id: Optional[str] = None) -> di
     profile = get_user_profile()
     feed_items = get_feed(hours=336, limit=20)
     focus_item = get_article(article_id) if article_id else None
-    key = os.getenv("OPENAI_API_KEY")
+    context_items = [focus_item] if focus_item else _top_matches(feed_items, message, limit=4)
 
-    if key:
-        try:
-            client = OpenAI(api_key=key)
-            context_items = [focus_item] if focus_item else _top_matches(feed_items, message, limit=4)
-            context_block = "\n\n".join(
-                [
-                    f"Title: {item['title']}\nSource: {item['source']}\nSummary: {item['summary']}\n"
-                    f"AI Insight: {item['aiInsight']}\nURL: {item['url']}"
-                    for item in context_items
-                ]
-            )
-            prompt = (
-                f"User profile: {profile['name']} | {profile['background']}\n"
-                f"Interests: {', '.join(profile['interests'])}\n\n"
-                f"Available AI news context:\n{context_block or 'No matching articles were found.'}\n\n"
-                f"User question: {message}\n\n"
-                "Answer as The Curator in a concise, practical style. Reference the available feed items when relevant."
-            )
-
-            response = client.responses.create(
-                model=os.getenv("CHAT_MODEL", "gpt-4.1-mini"),
-                input=prompt,
-            )
-            answer = getattr(response, "output_text", "").strip()
-            if answer:
-                return {
-                    "answer": answer,
-                    "references": context_items,
-                }
-        except Exception:
-            pass
+    provider = get_default_provider()
+    try:
+        result = asyncio.run(
+            provider.generate_chat_response(user_profile=profile, context_items=context_items, message=message)
+        )
+        if result.content and not result.used_fallback:
+            return {
+                "answer": result.content,
+                "references": context_items,
+            }
+    except Exception:
+        pass
 
     matches = [focus_item] if focus_item else _top_matches(feed_items, message, limit=3)
     if matches:

@@ -1,6 +1,7 @@
 import logging
 import sys
 from pathlib import Path
+from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -8,6 +9,7 @@ load_dotenv()
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.agent.curator_agent import CuratorAgent
+from app.llm.base import BaseLLMProvider
 from app.profiles.user_profile import USER_PROFILE
 from app.database.repository import Repository
 
@@ -19,8 +21,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def curate_digests(hours: int = 24) -> dict:
-    curator = CuratorAgent(USER_PROFILE)
+def curate_digests(hours: int = 24, provider: Optional[BaseLLMProvider] = None) -> dict:
+    curator = CuratorAgent(USER_PROFILE, provider=provider)
     repo = Repository()
     
     digests = repo.get_recent_digests(hours=hours)
