@@ -19,7 +19,8 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional, Type
 
-from app.config import LLMSettings, get_llm_settings
+from functools import lru_cache
+from app.config import LLMConfig, get_llm_config
 from app.llm.base import BaseLLMProvider
 from app.llm.exceptions import AllProvidersUnavailableError, LLMError
 from app.llm.groq_provider import GroqProvider
@@ -44,7 +45,7 @@ def register_provider(name: str, provider_cls: Type[BaseLLMProvider]) -> None:
     _PROVIDER_REGISTRY[name.lower()] = provider_cls
 
 
-def _build_provider(name: str, settings: LLMSettings) -> BaseLLMProvider:
+def _build_provider(name: str, settings: LLMConfig) -> BaseLLMProvider:
     name = name.lower().strip()
     provider_cls = _PROVIDER_REGISTRY.get(name)
     if provider_cls is None:
@@ -181,8 +182,8 @@ class FallbackLLMProvider(BaseLLMProvider):
 
 def create_provider(provider_name: Optional[str] = None) -> BaseLLMProvider:
     """Build a single provider instance directly (no fallback chain)."""
-    settings = get_llm_settings()
-    name = (provider_name or settings.provider or "openai").lower()
+    settings = get_llm_config()
+    name = (provider_name or settings.provider.value).lower()
     return _build_provider(name, settings)
 
 
@@ -191,11 +192,11 @@ def create_provider_with_fallback(order: Optional[List[str]] = None) -> BaseLLMP
     Build the resilient chain described in the architecture spec:
     <preferred> -> groq -> openai -> ollama -> rule-based (deduplicated).
     """
-    settings = get_llm_settings()
+    settings = get_llm_config()
     default_order = ["groq", "openai", "ollama"]
     chain_names: List[str] = []
 
-    preferred = settings.provider
+    preferred = settings.provider.value
     if preferred and preferred in _PROVIDER_REGISTRY and preferred != "rule_based":
         chain_names.append(preferred)
 
